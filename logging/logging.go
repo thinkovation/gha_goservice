@@ -21,7 +21,7 @@ func Logging() {
 
 func rollingLog() {
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   "/var/log/simpleserver.log",
+		Filename:   "app.log",
 		MaxSize:    1, // megabytes
 		MaxBackups: 30,
 		MaxAge:     28,    //days

@@ -16,14 +16,14 @@ App Key = bwiawoitmisbstdwblhyh
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Error loading .env file")
+		log.Fatal("Error loading .env file. Server closing")
 	}
 	// Start up logging
 	logging.Logging()
 
 	server := NewServer(os.Getenv("HTTP_PORT"))
 
-	fmt.Printf("Starting TTN Receiver Server on port %v\n", server.Addr)
+	fmt.Printf("Starting Server on port %v\n", server.Addr)
 	log.Printf("Starting Server on port %v\n", server.Addr)
 
 	go func() {
@@ -32,7 +32,7 @@ func main() {
 
 		if err != nil {
 
-			log.Fatalln("Cannot Start Server, exiting:", err.Error())
+			log.Fatalln("server exiting:", err.Error())
 
 		}
 	}()
