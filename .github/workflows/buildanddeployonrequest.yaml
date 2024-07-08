@@ -33,12 +33,12 @@ jobs:
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-        scp -o StrictHostKeyChecking=no ./$APP_NAME $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/$APP_NAME
+        scp -o StrictHostKeyChecking=no ./$APP_NAME $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/$APP_NAME.new
 
     - name: Restart service on remote server
       run: |
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << EOF
           sudo systemctl stop $APP_NAME.service  # Adjust this to your service name
-          sudo cp $REMOTE_PATH/$APP_NAME /usr/local/bin/$APP_NAME  # Adjust this path to your binary location
+          cp $REMOTE_PATH/$APP_NAME.new $REMOTE_PATH/$APP_NAME  # Adjust this path to your binary location
           sudo systemctl start $APP_NAME.service  # Adjust this to your service name
         EOF
