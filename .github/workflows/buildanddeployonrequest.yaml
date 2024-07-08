@@ -25,7 +25,7 @@ jobs:
 
     - name: Build
       run: |
-        go build -o $APP_NAME ./cmd/$APP_NAME  # Adjust the command according to your project structure
+        go build -o $APP_NAME ./main.go  # Adjust the command according to your project structure
 
     - name: Copy binary to remote server
       run: |
