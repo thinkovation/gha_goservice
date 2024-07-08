@@ -41,4 +41,4 @@ jobs:
           sudo systemctl stop $APP_NAME.service  # Adjust this to your service name
           sudo cp $REMOTE_PATH/$APP_NAME /usr/local/bin/$APP_NAME  # Adjust this path to your binary location
           sudo systemctl start $APP_NAME.service  # Adjust this to your service name
-EOF
+        EOF
