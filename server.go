@@ -36,7 +36,7 @@ func NewServer(port string) *myServer {
 
 	//register handlers
 	router.HandleFunc("/api/simpleserver", s.RootHandler)
-
+	router.HandleFunc("/nwadmin/simpleserver", s.RootHandlerAdmin)
 	// CORS stuff
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "X-API-KEY", "X-Request-Token", "Content-Type"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
@@ -72,6 +72,10 @@ func (s *myServer) WaitShutdown() {
 }
 
 func (s *myServer) RootHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("simpleserver\n"))
+}
+
+func (s *myServer) RootHandlerAdmin(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("simpleserver\n"))
 }
 

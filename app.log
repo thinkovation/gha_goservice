@@ -1,0 +1,14 @@
+SRV: 2024/07/08 15:16:33 logging.go:12: Logging initialised
+SRV: 2024/07/08 15:16:33 main.go:19: Error loading .env file
+SRV: 2024/07/08 15:16:33 main.go:27: Starting Server on port :
+SRV: 2024/07/08 15:16:55 server.go:56: Shutdown request (signal: interrupt)
+SRV: 2024/07/08 15:16:55 server.go:60: Stopping API server ...
+SRV: 2024/07/08 15:16:55 main.go:35: Cannot Start Server, exiting: http: Server closed
+SRV: 2024/07/08 15:19:15 logging.go:12: Logging initialised
+SRV: 2024/07/08 15:19:15 main.go:19: Error loading .env file
+SRV: 2024/07/08 15:19:15 main.go:27: Starting Server on port :
+SRV: 2024/07/08 15:19:24 server.go:56: Shutdown request (signal: interrupt)
+SRV: 2024/07/08 15:19:24 server.go:60: Stopping API server ...
+SRV: 2024/07/08 15:19:24 main.go:35: Cannot Start Server, exiting: http: Server closed
+SRV: 2024/07/08 15:19:29 logging.go:12: Logging initialised
+SRV: 2024/07/08 15:19:29 main.go:19: Error loading .env file
