@@ -1,0 +1,3124 @@
+openapi: 3.0.0
+consumes:
+- application/json
+info:
+  title: STORRM API
+  description: 'STORRM is primarily a service for fetching time series data associated with locations/devices. The metrics reported by a location/device are referred to as "phenomena" or "phenoms". These phenomena are grouped according to their data type: Numeric (Dnum), Boolean (Dbool) and String (Dstring). A typical STORRM data element then presents itself as follows: 
+                {
+                  "Dnum": {
+                    "CO2": 24.0,
+                    "O3": 22.2
+                  },
+                  "Dbool": {
+                    "FanMode": false,
+                    "BatterySaverMode": true,
+                  },
+                  "Dstring": {
+                    "WindDirection": "NW",
+                    "BatteryLevel": "Low"
+                  }
+                }.    
+                <br/>
+                Where the data is averaged (the default behaviour for all data fetching APIs), the string component is absent from the response. To override this behaviour, supply the "splitDuration" or "split" parameter as 0. In this case, the data is returned as is, without averaging.
+                <br/>
+                To aggregate the boolean components, STORRM represents true as 1 and false as 0. Suppose a location reports data for a boolean phenomena, X, once a minute and a request is made with a "splitDuration" of 10 minutes. If all 10 data points for X report false, then the result is 0.0. If one of the 10 reports true, then the result is 0.1 and so on and so forth until a score of 1.0 representing 10 true values.
+                '
+   
+produces:
+- application/json
+schemes:
+- http
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
+  parameters:
+    fromTime:      # Can be referenced via '#/components/parameters/fromTime'
+      name: from
+      in: query
+      description: 'Default: 3h. The time from which data should be returned'
+      required: false
+      schema:
+        type: DateTime/Duration
+        format: date-time
+      example: 3h
+    
+    toTime:  
+      name: to
+      in: query
+      description: 'Default: 0h. The time until which data should be returned'
+      required: false
+      schema:
+        type: DateTime/Duration
+        format: date-time
+      example: 0h
+    
+    fromInclusive:  
+      name: fromInclusive
+      in: query
+      description: 'Default: true. A boolean value indicating whether the "from" parameter should be treated as inclusive'
+      required: false
+      schema:
+        type: boolean
+      example: true
+
+    toInclusive:  
+      name: toInclusive
+      in: query
+      description: 'Default: false. A boolean value indicating whether the "to" parameter should be treated as inclusive'
+      required: false
+      schema:
+        type: boolean
+      example: false
+
+    lastDays:  
+      name: lastdays
+      in: query
+      description: No default (see 'from'). A numeric value that denotes a time period in days
+      required: false
+      schema:
+        type: integer
+
+    lastHours:  
+      name: lasthours
+      in: query
+      description: No default (see 'from'). A numeric value that denotes a time period in hours
+      required: false
+      schema:
+        type: integer
+    
+    lastMins:  
+      name: lastmins
+      in: query
+      description: No default (see "from"). A numeric value that denotes a time period in minutes
+      required: false
+      schema:
+        type: integer
+
+    phenom:        
+      name: phenom
+      in: query
+      description: No default. If not supplied the API will return all phenomena reported by the location(s). Else only those phenomena supplied will be returned. Wildcards are accepted e.g Battery\*, \*Battery, \*Battery* and B\*y
+      required: false
+      explode: true
+      schema:
+        type: array
+        items: 
+          type: string
+          
+    queryLocationID:    
+      in: query
+      name: locationID
+      description: Location ID.
+      required: false
+      explode: true
+      schema:
+        type: array
+        items: 
+          type: string
+         
+    pathLocationID:
+      in: path
+      name: locationID
+      description: Location ID.
+      required: true
+      schema:
+        type: string
+       
+    queryGroupID:       
+      in: query
+      name: groupID
+      description: Group ID.
+      required: false
+      explode: true
+      schema:
+        type: array
+        items: 
+          type: string
+          
+      
+    pathGroupID:
+      in: path
+      name: groupID
+      type: string
+      description: Group ID.
+      required: true
+      schema:
+        type: string
+
+    pathFloorplanID:
+      in: path
+      name: floorplanID
+      type: string
+      description: Floorplan ID.
+      required: true
+      schema:
+        type: string
+        
+    pathAssetID:
+      in: path
+      name: assetID
+      type: string
+      description: Asset ID.
+      required: true
+      schema:
+        type: string
+    
+    pathUserID:
+      in: path
+      name: userID
+      type: string
+      description: User ID.
+      required: true
+      schema:
+        type: string
+    
+    pathKeyID:
+      in: path
+      name: keyID
+      type: string
+      description: Key ID.
+      required: true
+      schema:
+        type: string
+
+    pathFileType:
+      in: path
+      name: fileType
+      description: File Type.
+      required: true
+      schema:
+        type: string
+        enum:
+          - json
+          - csv
+    
+    queryWithSensors:  
+      name: withSensors
+      in: query
+      description: A boolean value indicating wheter the response should contain the sensors definitions for each location
+      required: false
+      schema:
+        type: boolean
+
+    timezone:
+      in: query
+      name: timezone
+      description: 'Default: UTC. An IANA recognised timezone e.g. Europe/London'
+      required: false 
+      schema:
+        type: string
+      example: UTC  
+
+    splitMins:
+      in: query
+      name: split
+      description: No default (see "splitDuration"). A numeric value that denotes the granularity, in minutes, of the returned data e.g. a split of 30 will return data averaged into 30 minute intervals
+      required: false
+      schema:
+        type: integer
+    
+    splitDuration:
+      in: query
+      name: splitDuration
+      description: 'Default: 10m. A duration indicating the interval at which averaging should be applied. E.g a splitDuration of "30m" will return data averaged into 30 minute intervals.'
+      required: false
+      schema:
+        type: Duration
+    
+    rollingSplitDuration:
+      in: query
+      name: splitDuration
+      description: 'Default: 1h. A duration indicating the regularity at which averaging should be applied. E.g a splitDuration of "30m" will return data averaged every 30 minutes.'
+      required: false
+      schema:
+        type: Duration
+
+    spanDuration:
+      in: query
+      name: spanDuration
+      description: 'Default: 8h. A duration indicating the interval at which the rolling averaging should be applied. E.g a spanDuration of "8h" will return data averaged into 8 hour blocks.'
+      required: false
+      schema:
+        type: Duration
+
+    offset:
+      in: query
+      name: groupby
+      description: Default "trailing". Denotes whether split averages are grouped by trailing or leading times.
+      required: false
+      schema:
+        type: string
+        enum:
+          - trailing
+          - leading
+      example: trailing
+
+    span:
+      in: query
+      name: span
+      description: No default (see "spanDuration"). A numeric value that denotes the time interval, in hours, for the rolling average
+      required: false
+      schema:
+        type: integer
+
+    username:
+      in: query
+      name: username
+      description: Username
+      required: true
+      schema:
+        type: string
+    
+    password:
+      in: query
+      name: password
+      description: Password
+      required: true
+      schema:
+        type: string
+        format: password
+      
+    newpassword:
+      in: query
+      name: newpassword
+      description: New password
+      required: false
+      schema:
+        type: string
+        format: password
+    
+    token:
+      in: header
+      name: X-API-KEY
+      description: Token
+      required: true
+      schema:
+        type: string
+
+    pathRegion:
+      in: path
+      name: regionID
+      description: A region can either be a predefined geographical region such as a london borough or a user defined geometrical shape. Currently 'circle', 'rectangle' and 'polygon' are supported shape types. 
+      required: true
+      schema:
+        type: string
+
+    centreLat:
+      in: query
+      name: centreLat
+      description: A numerical value that represent the latitude of the circle's centre
+      required: true
+      schema:
+        type: float
+
+    centreLng:
+      in: query
+      name: centreLng
+      description: A numerical value that represent the longitude of the circle's centre
+      required: true
+      schema:
+        type: float
+    
+    radius:
+      in: query
+      name: radius
+      description: A numerical value that denotes a circle radius, in metres
+      required: true
+      schema:
+        type: integer
+
+    topLeftLat:
+      in: query
+      name: topLeftLat
+      description: A numeric value that represents the latitude of the rectangle's top left vertex
+      required: true
+      schema:
+        type: float
+
+    topLeftLng:
+      in: query
+      name: topLeftLng
+      description: A numeric value that represents the longitude of the rectangle's top left vertex
+      required: true
+      schema:
+        type: float
+  
+    bottomRightLat:
+      in: query
+      name: bottomRightLat
+      description: A numeric value that represents the latitude of the rectangle's bottom right vertex
+      required: true
+      schema:
+        type: float
+
+    bottomRightLng:
+      in: query
+      name: bottomRightLng
+      description: A numeric value that represents the longitude of the rectangle's bottom right vertex
+      required: true
+      schema:
+        type: float
+        
+    vertex:
+      in: query
+      name: vertex
+      description: A comma separated latitude,longitude that represents a polygon's vertex e.g. 50.2,-1.5
+      required: true
+      explode: true
+      schema:
+        type: array
+        items: 
+          type: string
+  
+  schemas:
+    DateTime:
+      type: string
+      description: '
+                  A datetime in zulu format YYYY-MM-DDTHH:MM:SSZ (eg 2006-01-02T15:04:05Z) 
+                  or a date in the format YYYY-MM-DD (eg 2006-01-02). If provided in the second format, the time component is assumed to be T00:00:00Z, so the two examples are equivalent.    
+                  All DateTime parameters can also be supplied as a Duration. In these cases the datetime is calculated by subtracting the supplied duration from the current UTC time. 
+                  '
+    Duration:
+      type: string
+      description: '
+                 A temporal duration formatted as an appropraite string. E.g. 1h30m represents 1 hour and 30 minutes. Durations run from hours to nano seconds e.g. 60h50m40s30ms20us10ns. Zeroed elements can be omitted e.g. 0h0m0s35ms0us00ns and 35ms are equivalent.
+                  '
+    tsRow:
+      type: object
+      properties:
+        TS: 
+          type: string
+          format: date-time
+        Dnum:
+          type: object
+          additionalProperties:
+            type: integer
+        Dbool:
+          type: object
+          additionalProperties:
+            type: integer
+        Dstring:
+          type: object
+          additionalProperties:
+            type: string
+
+    tsEntry:
+      type: object
+      properties:
+        locationID:
+          type: string
+        timeSeriesData:
+          type: array
+          items:
+            $ref: '#/components/schemas/tsRow'
+
+    latestEntry:
+      type: object
+      properties:
+        locationID:
+          type: string
+        latestData:
+          $ref: '#/components/schemas/tsRow'
+    
+    marker:
+      type: object
+      properties:
+        value:
+          type: number
+        colour:
+          type: string
+        label:
+          type: string
+        text:
+          type: string
+
+    sensor:
+      type: object
+      properties:
+        shortName:
+          type: string
+        units:
+          type: string
+        longName:
+          type: string
+        minScale:
+          type: number
+          format: float
+        maxScale:
+          type: number
+          format: float
+        markers:
+           type: array
+           items:
+            $ref: '#/components/schemas/marker'
+        graphColour:
+          type: string
+        icon:
+          type: string
+        compass:
+          type: string
+
+    locationEntry:
+      type: object
+      properties:
+        locationID:
+          type: string
+        deviceID:
+          type: string
+        partnerID:
+          type: string
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+        name:
+          type: string
+        friendlyName:
+          type: string
+        description: 
+          type: string
+        status:
+          type: string
+        lastContact:
+          type: string
+          format: date-time
+        icon:
+          type: string
+        sensors:
+          type: array
+          items:
+            $ref: '#/components/schemas/sensor'
+        rights:
+          type: array
+          items:
+            type: string
+              
+    user:
+      type: object
+      properties:
+        userID:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+        phone:
+          type: string  
+        token:
+          type: string
+        type: 
+          type: string
+        level:
+          type: string
+        partnerID:
+          type: string
+        partnerLat:
+          type: number
+          format: float
+        partnerLng:
+          type: number
+          format: float
+    
+    putUser:
+      type: object
+      properties:
+        email: 
+          type: string
+        phone:
+          type: string
+        lat:
+          type: number
+          format: float
+        lng:
+          type: number
+          format: float
+
+    regionListEntry:
+      type: object
+      properties:
+        regionID:
+          type: string
+        name:
+          type: string
+        description: 
+          type: string
+        type:
+          type: string
+        partnerID:
+          type: string
+
+    apiKeyEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+    
+    apiKeyListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/apiKeyEntry'
+        message:
+          type: string
+        token:
+          type: string
+    
+    usergroups:
+      type: array
+      items: 
+          type: string
+
+    daqiEntry:
+      type: object
+      properties:
+        phenom:
+          type: string
+        index:
+          type: integer
+        band: 
+          type: string
+        rawValue:
+          type: float
+    
+    daqiResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/daqiEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    polygon:
+      type: object
+      properties:
+        Points:
+          type: array
+          items:
+            type: object
+            properties:
+              Lat:
+                type: number
+                format: float
+              Lng:
+                type: number
+                format: float
+
+
+    regionDetails:
+      type: object
+      properties:
+        regionID:
+          type: string
+        name:
+          type: string
+        description: 
+          type: string
+        type:
+          type: string
+        partnerID:
+          type: string
+        bounds:
+          type: array
+          items:
+            type: object
+            properties:
+              OuterPolygon:
+                $ref: '#/components/schemas/polygon' 
+              InnerPolygons:
+                type: array
+                items:
+                  $ref: '#/components/schemas/polygon'
+    
+    multipleRegionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/regionListEntry'
+        message:
+          type: string
+        token:
+          type: string
+    
+    floorplanListEntry:
+      type: object
+      properties:
+        floorplanID:
+          type: string
+        name:
+          type: string
+        description: 
+          type: string
+        assetID:
+          type: string
+        partnerID:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        noOfLocations:
+          type: integer
+        bounds:
+          type: object
+          properties:
+            topLeftLat:
+              type: float
+            topLeftLng:
+              type: float
+            bottomRightLat:
+              type: float
+            bottomRightLng:
+              type: float
+    
+    floorplanLocation:
+      type: object
+      properties:
+        locationID:
+          type: string
+        locationName:
+          type: string
+        locationDescription:
+          type: string
+        x: 
+          type: float
+        y:
+          type: float
+        z:
+          type: float
+        latestData:
+          $ref: '#/components/schemas/tsRow'
+        sensorSpecs:
+          type: array
+          items:
+            $ref: '#/components/schemas/sensor'
+
+    floorplanLocationList:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/floorplanLocation'
+        message:
+          type: string
+        token:
+          type: string
+  
+
+    historicResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/tsEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    multipleHistoricResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/tsEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    latestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/latestEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    multipleLatestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/latestEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    locationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/locationEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    multipleLocationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/locationEntry'
+        message:
+          type: string
+        token:
+          type: string
+
+    loginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/user'
+        message:
+          type: string
+        token:
+          type: string
+    
+    usergroupsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        data:
+          $ref: '#/components/schemas/usergroups'
+        message:
+          type: string
+        token:
+          type: string
+
+  responses:
+    postAPIKey200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/apiKeyEntry'
+          example:   
+            status: ok
+            data: 
+              id: token1
+              token: adhs-3fd4-gsdf-4fa2
+            message: "Success!"
+            token: user token
+
+    put200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: 
+                type: string
+              data:
+                type: object 
+              token:
+                type: string
+              message:
+                type: string
+          example:   
+            status: ok
+            data: null
+            message: "Success!"
+            token: user token
+
+
+    apiKeyList200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/apiKeyListResponse'
+          example:   
+            status: ok
+            data: 
+              - id: token1
+                token: adhs-3fd4-gsdf-4fa2
+              - id: token2
+                token: adha-4fe4-g13df-92rg
+            message: ""
+            token: user token
+
+    daqi200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/daqiResponse'
+          example:   
+            status: ok
+            data: 
+              - phenom: O3
+                index: 2
+                band: "Low"
+                rawValue: 22.3
+              - phenom: PM10
+                index: 3
+                band: "Medium"
+                rawValue: 30.4
+              - phenom: overall
+                index: 3
+                band: "Medium"
+                rawValue: 0
+            message: ""
+            token: user token
+
+    daqi400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/daqiResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    daqi404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/daqiResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    floorplanLocations200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanLocationList'
+          example:   
+            status: ok
+            data: 
+              - locationID: AIRSENSA00001
+                locationName: Airsensa Office - Board Room
+                locationDescription: Located next to the air vent
+                x: 2
+                y: 3
+                z: 1
+                latestData:
+                  TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+                sensorSpecs:
+                  - shortName: "NO2"
+                    units: "µg/m³"
+                    longName: "Nitrogen Dioxide"
+                    minScale: 0
+                    maxScale: 700
+                    markers:
+                      - value: 201
+                        colour: "#0F0"
+                        label: "Green Zone"
+                        text: "NO2 levels are safe"
+                      - value: 401
+                        colour: "#FFBF00"
+                        label: "Amber Zone"
+                        text: "NO2 levels are approaching dangerous"
+                      - value: 700
+                        colour: "#F00"
+                        label: "Red Zone"
+                        text: "NO2 levels are dangerously high"
+                    graphColour: "#CF0"
+                    icon: "no2.png"
+                    compass: "false"
+              - locationID: AIRSENSA00002
+                locationName: Airsensa Office - Main Room
+                locationDescription: Located above the main door
+                x: 1
+                y: 5
+                z: 2
+                latestData:
+                  TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+                sensorSpecs:
+                  - shortName: "NO2"
+                    units: "µg/m³"
+                    longName: "Nitrogen Dioxide"
+                    minScale: 0
+                    maxScale: 700
+                    markers:
+                      - value: 201
+                        colour: "#0F0"
+                        label: "Green Zone"
+                        text: "NO2 levels are safe"
+                      - value: 401
+                        colour: "#FFBF00"
+                        label: "Amber Zone"
+                        text: "NO2 levels are approaching dangerous"
+                      - value: 700
+                        colour: "#F00"
+                        label: "Red Zone"
+                        text: "NO2 levels are dangerously high"
+                    graphColour: "#CF0"
+                    icon: "no2.png"
+                    compass: "false"
+            message: ""
+            token: user token
+
+    floorplanLocations400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanLocation'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    floorplanLocations404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanLocation'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+
+    multipleFloorplan200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanListEntry'
+          example:   
+            status: ok
+            data: 
+              floorplanID: AIRSENSA00001
+              name: Airsensa Office
+              description: Airsensa Head Office
+              assetID: c0dq5cseg3la1kqpne84
+              partnerID: AIRSENSA
+              width: 100
+              height: 150
+              noOfLocations: 7
+              bounds:
+                topLeftLat: 2.3
+                topLeftLng: 2.2
+                bottomRightLat: 2.0
+                bottomRightLng: 2.01
+            message: ""
+            token: user token
+
+    multipleFloorplan400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanListEntry'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    multipleFloorplan404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/floorplanListEntry'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    
+    singleRegion200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/regionDetails'
+          example:   
+            status: ok
+            data: 
+              regionID: lb_Camden example
+              name: Camden example
+              description: Second Level London Postcode Area example
+              type: London Borough example
+              partnerID: AIRSENSA
+              bounds:
+                - OuterPolygon:
+                    Points: 
+                      - Lat: 2.3
+                        Lng: -1.5
+                      - Lat: 2.4
+                        Lng: -1.4
+                      - Lat: 2.2
+                        Lng: -1.2
+                - InnerPolygons:
+                  - Points:
+                    - Lat: 2.3
+                      Lng: -1.5
+                    - Lat: 2.4
+                      Lng: -1.4
+                    - Lat: 2.2
+                      Lng: -1.2
+            message: ""
+            token: user token
+
+    singleRegion400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/regionDetails'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    singleRegion404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/regionDetails'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    multipleRegion200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleRegionResponse'
+          example:   
+            status: ok
+            data: 
+              - regionID: lb_Camden
+                name: Camden
+                description: Second Level London Postcode Area
+                type: London Borough
+                partnerID: AIRSENSA
+              - regionID: pca_N18
+                name: N18
+                description: N18 postcode district
+                type: Post Code Area
+                partnerID: AIRSENSA
+            message: ""
+            token: user token
+
+    multipleRegion400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleRegionResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    multipleRegion404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleRegionResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    historic400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/historicResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    historic404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/historicResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    historic200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/historicResponse'
+          example:   
+            status: ok
+            data: 
+              locationID: AIRSENSA0001
+              timeSeriesData:
+                - TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+                - TS: '2021-02-17T16:50:00Z'
+                  Dnum:
+                    CO2: 1.1
+                    NO2: 2.4
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+            
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+            
+            AIRSENSA0001, 2021-03-01 02:10:00, +01:00, 32.4447, 23.274, 22.99, 34.94, 2.10, 1.45
+
+
+    historic200JSON:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/historicResponse'
+          example:   
+            status: ok
+            data: 
+              locationID: AIRSENSA0001
+              timeSeriesData:
+                - TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+                - TS: '2021-02-17T16:50:00Z'
+                  Dnum:
+                    CO2: 1.1
+                    NO2: 2.4
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+    
+    historic200CSV:
+      description: Success
+      content:
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+            
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+            
+            AIRSENSA0001, 2021-03-01 02:10:00, +01:00, 32.4447, 23.274, 22.99, 34.94, 2.10, 1.45
+
+    multipleHistoric200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleHistoricResponse'
+          example:   
+            status: ok
+            data: 
+              - locationID: AIRSENSA0001
+                timeSeriesData:
+                  - TS: '2021-02-17T16:40:00Z'
+                    Dnum:
+                      CO2: 1.2
+                      NO2: 2.0
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+                  - TS: '2021-02-17T16:50:00Z'
+                    Dnum:
+                      CO2: 1.1
+                      NO2: 2.4
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+              - locationID: AIRSENSA0002
+                timeSeriesData:
+                  - TS: '2021-02-17T16:40:00Z'
+                    Dnum:
+                      CO2: 1.2
+                      NO2: 2.0
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+                  - TS: '2021-02-17T16:50:00Z'
+                    Dnum:
+                      CO2: 1.1
+                      NO2: 2.4
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+            
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+            
+            AIRSENSA0001, 2021-03-01 02:10:00, +01:00, 32.4447, 23.274, 22.99, 34.94, 2.10, 1.45
+
+            AIRSENSA0002, 2021-03-01 02:00:00, +01:00, 22.00, 23.57, 23,34, 2.33, 7.6, 0.00
+
+    multipleHistoric200JSON:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleHistoricResponse'
+          example:   
+            status: ok
+            data: 
+              - locationID: AIRSENSA0001
+                timeSeriesData:
+                  - TS: '2021-02-17T16:40:00Z'
+                    Dnum:
+                      CO2: 1.2
+                      NO2: 2.0
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+                  - TS: '2021-02-17T16:50:00Z'
+                    Dnum:
+                      CO2: 1.1
+                      NO2: 2.4
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+              - locationID: AIRSENSA0002
+                timeSeriesData:
+                  - TS: '2021-02-17T16:40:00Z'
+                    Dnum:
+                      CO2: 1.2
+                      NO2: 2.0
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+                  - TS: '2021-02-17T16:50:00Z'
+                    Dnum:
+                      CO2: 1.1
+                      NO2: 2.4
+                    Dbool:
+                      FanActive: 0.0
+                    Dstring:
+                      BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+    
+    multipleHistoric200CSV:
+      description: Success
+      content:
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+            
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+            
+            AIRSENSA0001, 2021-03-01 02:10:00, +01:00, 32.4447, 23.274, 22.99, 34.94, 2.10, 1.45
+
+            AIRSENSA0002, 2021-03-01 02:00:00, +01:00, 22.00, 23.57, 23,34, 2.33, 7.6, 0.00
+
+
+
+    multipleHistoric400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleHistoricResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    multipleHistoric404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleHistoricResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    latest200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/latestResponse'
+          example:   
+            status: ok
+            data: 
+              locationID: AIRSENSA0001
+              latestData:
+                TS: '2021-02-17T16:40:00Z'
+                Dnum:
+                  CO2: 1.2
+                  NO2: 2.0
+                Dbool:
+                  FanActive: 0.0
+                Dstring:
+                  BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+    
+    latest200CSV:
+      description: Success
+      content:
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+            
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37     
+
+    latest400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/latestResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    latest404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/latestResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token                
+
+    multipleLatest200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLatestResponse'
+          example:   
+            status: ok
+            data: 
+              - locationID: AIRSENSA0001
+                latestData:
+                  TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+              - locationID: AIRSENSA0002
+                latestData:
+                  TS: '2021-02-17T16:40:00Z'
+                  Dnum:
+                    CO2: 1.2
+                    NO2: 2.0
+                  Dbool:
+                    FanActive: 0.0
+                  Dstring:
+                    BatteryMode: "PowerSave"
+            message: ""
+            token: user token
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+          
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+          
+            AIRSENSA0002, 2021-03-01 02:00:00, +01:00, 22.00, 23.57, 23,34, 2.33, 7.6, 0.00
+
+
+    multipleLatest200CSV:
+      description: Success
+      content:
+        text/csv:
+          schema:
+            type: string
+          example: # Empty Lines required for newlines
+            Location, Time, UTC Offset, Lat, Lng, NO2, O3, PM10, PM2.5 
+          
+            AIRSENSA0001, 2021-03-01 02:00:00, +01:00, 25.4447, 49.274, 21.99, 34.96, 2.08, 1.37 
+          
+            AIRSENSA0002, 2021-03-01 02:00:00, +01:00, 22.00, 23.57, 23,34, 2.33, 7.6, 0.00
+
+    multipleLatest400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLatestResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    multipleLatest404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLatestResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    
+    location200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/locationResponse'
+          example:   
+            status: ok
+            data: 
+              locationID: AIRSENSA0001
+              deviceID: 'AQY BB-001'
+              partnerID: 'AIRSENSA'
+              lat: 50.9
+              lng: -1.5
+              name: Test Device
+              friendlyName: Test device for swagger docs
+              description: This is a virtual device
+              status: "LIVE"
+              lastContact: "2006-01-02T15:04:05Z"
+              icon: "#3498DB"
+              sensorSpecs:
+                - shortName: "NO2"
+                  units: "µg/m³"
+                  longName: "Nitrogen Dioxide"
+                  minScale: 0
+                  maxScale: 700
+                  markers:
+                    - value: 201
+                      colour: "#0F0"
+                      label: "Green Zone"
+                      text: "NO2 levels are safe"
+                    - value: 401
+                      colour: "#FFBF00"
+                      label: "Amber Zone"
+                      text: "NO2 levels are approaching dangerous"
+                    - value: 700
+                      colour: "#F00"
+                      label: "Red Zone"
+                      text: "NO2 levels are dangerously high"
+                  graphColour: "#CF0"
+                  icon: "no2.png"
+                  compass: "false"
+              rights:
+                - CanDownload
+                - CanManage
+            message: ""
+            token: user token
+    location400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/locationResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    location404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/locationResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    multipleLocation200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLocationResponse'
+          example:   
+            status: ok
+            data: 
+              - locationID: AIRSENSA0001
+                deviceID: 'AQY BB-001'
+                partnerID: 'AIRSENSA'
+                lat: 50.9
+                lng: -1.5
+                name: Test Device
+                friendlyName: Test device for swagger docs
+                description: This is a virtual device
+                status: "LIVE"
+                lastContact: "2006-01-02T15:04:05Z"
+                icon: "#3498DB"
+                sensorSpecs:
+                  - shortName: "NO2"
+                    units: "µg/m³"
+                    longName: "Nitrogen Dioxide"
+                    minScale: 0
+                    maxScale: 700
+                    markers:
+                      - value: 201
+                        colour: "#0F0"
+                        label: "Green Zone"
+                        text: "NO2 levels are safe"
+                      - value: 401
+                        colour: "#FFBF00"
+                        label: "Amber Zone"
+                        text: "NO2 levels are approaching dangerous"
+                      - value: 700
+                        colour: "#F00"
+                        label: "Red Zone"
+                        text: "NO2 levels are dangerously high"
+                    graphColour: "#CF0"
+                    icon: "no2.png"
+                    compass: "false"
+                rights:
+                  - CanDownload
+                  - CanManage
+              - locationID: AIRSENSA0002
+                deviceID: 'AQY BB-002'
+                partnerID: 'AIRSENSA'
+                lat: 50.9
+                lng: -1.5
+                name: Test Device 2
+                friendlyName: Test device 2 for swagger docs
+                description: This is a virtual device
+                status: "LIVE"
+                lastContact: "2006-01-02T15:04:05Z"
+                icon: "#3498DB"
+                sensorSpecs:
+                  - shortName: "NO2"
+                    units: "µg/m³"
+                    longName: "Nitrogen Dioxide"
+                    minScale: 0
+                    maxScale: 700
+                    markers:
+                      - value: 201
+                        colour: "#0F0"
+                        label: "Green Zone"
+                        text: "NO2 levels are safe"
+                      - value: 401
+                        colour: "#FFBF00"
+                        label: "Amber Zone"
+                        text: "NO2 levels are approaching dangerous"
+                      - value: 700
+                        colour: "#F00"
+                        label: "Red Zone"
+                        text: "NO2 levels are dangerously high"
+                    graphColour: "#CF0"
+                    icon: "no2.png"
+                    compass: "false"
+                rights:
+                  - CanDownload
+                  - CanManage
+            message: ""
+            token: user token
+    multipleLocation400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLocationResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    multipleLocation404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/multipleLocationResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+
+    login200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/loginResponse'
+          example:   
+            status: ok
+            data: 
+              userID: cx543cccffds876
+              username: AirsensaAdmin
+              email: airsensa@gmail.com
+              lat: 50.9
+              lng: -1.5
+              phone: 07500 118112
+              token: user token
+              type: API
+              level: ADMIN
+              partnerID: 'AIRSENSA'
+              partnerLat: 50.9
+              partnerLng: -1.5
+            message: ""
+            token: user token
+    login400:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/loginResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    login404:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/loginResponse'
+          example:   
+            status: error
+            data: []
+            message: error message
+            token: user token
+    usergroups200:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/usergroupsResponse'
+          example:   
+            status: ok
+            data: 
+              - 'AIRSENSATEST_USER'
+              - 'AIRSENSATEST_ADMIN'
+              - 'AIRSENSATEST_MAIN'
+            message: ""
+            token: user token
+security:
+  - ApiKeyAuth: []
+
+
+paths:
+
+########
+#HISTORIC
+########
+
+  /api/V03/locations/{locationID}/tsd.json:
+    get:
+      tags: [Location]
+      operationId: HistoricDataJSON
+      summary: Get historic data for single location - JSON format
+    
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        
+      responses:
+        200:
+          $ref: '#/components/responses/historic200JSON'
+        400: 
+          $ref: '#/components/responses/historic400'
+        404:
+          $ref: '#/components/responses/historic404'
+
+  /api/V03/locations/{locationID}/tsd.csv:
+    get:
+      tags: [Location]
+      operationId: HistoricDataCSV
+      summary: Get historic data for single location - CSV format
+  
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+
+      responses:
+        200:
+          $ref: '#/components/responses/historic200CSV'
+        400: 
+          $ref: '#/components/responses/historic400'
+        404:
+          $ref: '#/components/responses/historic404'
+
+  /api/V03/locations/tsd.json:
+    get:
+      tags: [Locations]
+      operationId: HistoricDataJSON
+      summary: Get historic data for multiple locations - JSON format
+  
+      parameters:
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/locations/tsd.csv:
+    get:
+      tags: [Locations]
+      operationId: HistoricDataCSV
+      summary: Get historic data for multiple locations - CSV format
+
+      parameters:
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/groups/{groupID}/tsd.json:
+    get:
+      tags: [Group]
+      operationId: HistoricDataJSON
+      summary: Get historic data for all locations in a single group - JSON format
+
+      parameters:
+        - $ref: '#/components/parameters/pathGroupID'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/groups/{groupID}/tsd.csv:
+    get:
+      tags: [Group]
+      operationId: HistoricDataCSV
+      summary: Get historic data for all locations in a single group - CSV format
+
+      parameters:
+        - $ref: '#/components/parameters/pathGroupID'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/{regionID}/tsd.json:
+    get:
+      tags: [Region]
+      operationId: HistoricDataJSON
+      summary: Get historic data for all locations in a region - JSON format
+
+      parameters:
+        - $ref: '#/components/parameters/pathRegion' 
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+  
+
+  /api/V03/regions/{regionID}/tsd.csv:
+    get:
+      tags: [Region]
+      operationId: HistoricDataCSV
+      summary: Get historic data for all locations in a region - CSV format
+  
+      parameters:
+        - $ref: '#/components/parameters/pathRegion' 
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/circle/tsd.json:
+    get:
+      tags: [Region-Circle]
+      operationId: HistoricDataJSON
+      summary: Get historic data for all locations in a circular region - JSON format
+
+      parameters:
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/circle/tsd.csv:
+    get:
+      tags: [Region-Circle]
+      operationId: HistoricDataCSV
+      summary: Get historic data for all locations in a circular region - CSV format
+   
+      parameters:
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/rectangle/tsd.json:
+    get:
+      tags: [Region-Rectangle]
+      operationId: HistoricDataJSON
+      summary: Get historic data for all locations in a rectangular region - JSON format
+
+      parameters:
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+
+  /api/V03/regions/rectangle/tsd.csv:
+    get:
+      tags: [Region-Rectangle]
+      operationId: HistoricDataCSV
+      summary: Get historic data for all locations in a rectangular region - CSV format
+
+      parameters:
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/polygon/tsd.json:
+    get:
+      tags: [Region-Polygon]
+      operationId: HistoricDataJSON
+      summary: Get historic data for all locations in a polygon region - JSON format
+
+      parameters:
+        - $ref: '#/components/parameters/vertex'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200JSON'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/polygon/tsd.csv:
+    get:
+      tags: [Region-Polygon]
+      operationId: HistoricDataCSV
+      summary: Get historic data for all locations in a polygon region - CSV format
+
+      parameters:
+        - $ref: '#/components/parameters/vertex'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/splitDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200CSV'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+########
+#LATEST
+########
+  /api/V03/locations/{locationID}/latest.json:
+    get:
+      tags: [Location]
+      operationId: LatestDataJSON
+      summary: Get latest data for a single location - JSON format
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/phenom'
+      responses:
+        200:
+          $ref: '#/components/responses/latest200'
+        400: 
+          $ref: '#/components/responses/latest400'
+        404:
+          $ref: '#/components/responses/latest404'
+
+  /api/V03/locations/{locationID}/latest.csv:
+    get:
+      tags: [Location]
+      operationId: LatestDataCSV
+      summary: Get latest data for a single location - CSV format
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/latest200CSV'
+        400: 
+          $ref: '#/components/responses/latest400'
+        404:
+          $ref: '#/components/responses/latest404'
+
+  /api/V03/locations/latest.json:
+    get:
+      tags: [Locations]
+      operationId: LatestDataJSON
+      summary: Get latest data for multiple locations - JSON format
+      parameters:
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/locations/latest.csv:
+    get:
+      tags: [Locations]
+      operationId: LatestDataCSV
+      summary: Get latest data for multiple locations - CSV format
+      parameters:
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/groups/{groupID}/latest.json:
+    get:
+      tags: [Group]
+      operationId: LatestDataJSON
+      summary: Get latest data for all locations in a single group - JSON format
+      parameters:
+        - $ref: '#/components/parameters/pathGroupID'
+        - $ref: '#/components/parameters/phenom'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+  
+  /api/V03/groups/{groupID}/latest.csv:
+    get:
+      tags: [Group]
+      operationId: LatestDataCSV
+      summary: Get latest data for all locations in a single group - CSV format
+      parameters:
+        - $ref: '#/components/parameters/pathGroupID'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/{regionID}/latest.json:
+    get:
+      tags: [Region]
+      operationId: LatestDataJSON
+      summary: Get latest data for all locations in a region - JSON format
+      parameters:
+        - $ref: '#/components/parameters/pathRegion'
+        - $ref: '#/components/parameters/phenom'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/{regionID}/latest.csv:
+    get:
+      tags: [Region]
+      operationId: LatestDataCSV
+      summary: Get latest data for all locations in a region - CSV format
+      parameters:
+        - $ref: '#/components/parameters/pathRegion'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+  
+  /api/V03/regions/circle/latest.json:
+    get:
+      tags: [Region-Circle]
+      operationId: LatestDataJSON
+      summary: Get latest data for all locations in a circular region - JSON format
+      parameters:
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+        - $ref: '#/components/parameters/phenom'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/circle/latest.csv:
+    get:
+      tags: [Region-Circle]
+      operationId: LatestDataCSV
+      summary: Get latest data for all locations in a circular region - CSV format
+      parameters:
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/rectangle/latest.json:
+    get:
+      tags: [Region-Rectangle]
+      operationId: LatestDataJSON
+      summary: Get latest data for all locations in a rectangular region - JSON format
+      parameters:
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+        - $ref: '#/components/parameters/phenom'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/rectangle/latest.csv:
+    get:
+      tags: [Region-Rectangle]
+      operationId: LatestDataCSV
+      summary: Get latest data for all locations in a rectangular region - CSV format
+      parameters:
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/polygon/latest.json:
+    get:
+      tags: [Region-Polygon]
+      operationId: LatestDataJSON
+      summary: Get latest data for all locations in a polygon region - JSON format
+      parameters:
+        - $ref: '#/components/parameters/vertex'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+
+  /api/V03/regions/polygon/latest.csv:
+    get:
+      tags: [Region-Polygon]
+      operationId: LatestDataCSV
+      summary: Get latest data for all locations in a polygon region - CSV format
+      parameters:
+        - $ref: '#/components/parameters/vertex'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/timezone'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLatest200CSV'
+        400: 
+          $ref: '#/components/responses/multipleLatest400'
+        404:
+          $ref: '#/components/responses/multipleLatest404'
+          
+########
+#Rolling
+########
+
+  /api/V03/locations/{locationID}/rolling.{fileType}:
+    get:
+      tags: [Location]
+      operationId: RollingData
+      summary: Get a trailing rolling average for single location
+
+   
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        
+      responses:
+        200:
+          $ref: '#/components/responses/historic200'
+        400: 
+          $ref: '#/components/responses/historic400'
+        404:
+          $ref: '#/components/responses/historic404'
+
+  /api/V03/locations/rolling.{fileType}:
+    get:
+      tags: [Locations]
+      operationId: RollingData
+      summary: Get a trailing rolling average for multiple locations
+  
+      parameters:
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/groups/{groupID}/rolling.{fileType}:
+    get:
+      tags: [Group]
+      operationId: rollingData
+      summary: Get a trailing rolling average for all locations in a single group
+
+      parameters:
+        - $ref: '#/components/parameters/pathGroupID'
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+
+  /api/V03/regions/{regionID}/rolling.{fileType}:
+    get:
+      tags: [Region]
+      operationId: RollingData
+      summary: Get a trailing rolling average for all locations in a region
+
+      parameters:
+        - $ref: '#/components/parameters/pathRegion'
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/circle/rolling.{fileType}:
+    get:
+      tags: [Region-Circle]
+      operationId: RollingData
+      summary: Get a trailing rolling average for all locations in a circular region
+
+      parameters:
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'        
+
+  /api/V03/regions/rectangle/rolling.{fileType}:
+    get:
+      tags: [Region-Rectangle]
+      operationId: RollingData
+      summary: Get a trailing rolling average for all locations in a rectangular region
+
+      parameters:
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+  /api/V03/regions/polygon/rolling.{fileType}:
+    get:
+      tags: [Region-Polygon]
+      operationId: RollingData
+      summary: Get a trailing rolling average for all locations in a polygon region
+
+      parameters:
+        - $ref: '#/components/parameters/pathFileType'
+        - $ref: '#/components/parameters/vertex'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/rollingSplitDuration'
+        - $ref: '#/components/parameters/spanDuration'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+        - $ref: '#/components/parameters/phenom'
+        - $ref: '#/components/parameters/splitMins'
+        - $ref: '#/components/parameters/span'
+        - $ref: '#/components/parameters/lastMins'
+        - $ref: '#/components/parameters/lastHours'
+        - $ref: '#/components/parameters/lastDays'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleHistoric200'
+        400: 
+          $ref: '#/components/responses/multipleHistoric400'
+        404:
+          $ref: '#/components/responses/multipleHistoric404'
+
+########
+#DAQI
+########
+  /api/V03/locations/{locationID}/daqi.json:
+    get:
+      tags: [Location]
+      operationId: DAQIData
+      summary: Get the Daily Air Quality Index for a single location
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+      responses:
+        200:
+          $ref: '#/components/responses/daqi200'
+        400: 
+          $ref: '#/components/responses/daqi400'
+        404:
+          $ref: '#/components/responses/daqi404'
+
+########
+#VERSIONED
+########
+
+  /api/V03/locations/{locationID}/versionedtsd.json:
+    get:
+      tags: [Location]
+      operationId: VersionedData
+      summary: Get versioned data for single location
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+        - $ref: '#/components/parameters/fromTime'
+        - $ref: '#/components/parameters/toTime'
+        - $ref: '#/components/parameters/fromInclusive'
+        - $ref: '#/components/parameters/toInclusive'
+      responses:
+        200:
+          $ref: '#/components/responses/historic200JSON'
+        400: 
+          $ref: '#/components/responses/historic400'
+        404:
+          $ref: '#/components/responses/historic404'
+
+########
+#Location Details
+########
+  /api/V03/locations/{locationID}:
+    get:
+      tags: [Location]
+      operationId: Details
+      summary: Get single location details
+      parameters:
+        - $ref: '#/components/parameters/pathLocationID'
+      responses:
+        200:
+          $ref: '#/components/responses/location200'
+        400:
+          $ref: '#/components/responses/location400'
+        404:
+          $ref: '#/components/responses/location404'
+
+  /api/V03/locations:
+    get:
+      tags: [Locations]
+      operationId: Details
+      summary: Get multiple location details
+      parameters:
+        - $ref: '#/components/parameters/queryLocationID'
+        - $ref: '#/components/parameters/queryGroupID'
+        - $ref: '#/components/parameters/queryWithSensors'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLocation200'
+        400:
+          $ref: '#/components/responses/multipleLocation400'
+        404:
+          $ref: '#/components/responses/multipleLocation404'
+
+########
+#Regions
+########
+  /api/V03/regions:
+    get:
+      tags: [Region]
+      operationId: regionList
+      summary: Get a list of all available regions
+      responses:
+        200:
+          $ref: '#/components/responses/multipleRegion200'
+        400: 
+          $ref: '#/components/responses/multipleRegion400'
+        404:
+          $ref: '#/components/responses/multipleRegion404'
+          
+  /api/V03/regions/{regionID}:
+    get:
+      tags: [Region]
+      operationId: regionDetails
+      summary: Get region details
+      parameters:
+        - $ref: '#/components/parameters/pathRegion'
+      responses:
+        200:
+          $ref: '#/components/responses/singleRegion200'
+        400: 
+          $ref: '#/components/responses/singleRegion400'
+        404:
+          $ref: '#/components/responses/singleRegion404'
+
+  /api/V03/regions/{regionID}/locations:
+    get:
+      tags: [Region]
+      operationId: regionLocations
+      summary: Get locations in region
+      parameters:
+        - $ref: '#/components/parameters/pathRegion'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLocation200'
+        400:
+          $ref: '#/components/responses/multipleLocation400'
+        404:
+          $ref: '#/components/responses/multipleLocation404'
+
+  /api/V03/regions/circle/locations:
+    get:
+      tags: [Region-Circle]
+      operationId: regionLocations
+      summary: Get locations in circular region
+      parameters:
+        - $ref: '#/components/parameters/centreLat'
+        - $ref: '#/components/parameters/centreLng'
+        - $ref: '#/components/parameters/radius'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLocation200'
+        400:
+          $ref: '#/components/responses/multipleLocation400'
+        404:
+          $ref: '#/components/responses/multipleLocation404'
+
+  /api/V03/regions/rectangle/locations:
+    get:
+      tags: [Region-Rectangle]
+      operationId: regionLocations
+      summary: Get locations in rectangular region
+      parameters:
+        - $ref: '#/components/parameters/topLeftLat'
+        - $ref: '#/components/parameters/topLeftLng'
+        - $ref: '#/components/parameters/bottomRightLat'
+        - $ref: '#/components/parameters/bottomRightLng'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLocation200'
+        400:
+          $ref: '#/components/responses/multipleLocation400'
+        404:
+          $ref: '#/components/responses/multipleLocation404'
+
+  /api/V03/regions/polygon/locations:
+    get:
+      tags: [Region-Polygon]
+      operationId: regionLocations
+      summary: Get locations in polygon region
+      parameters:
+        - $ref: '#/components/parameters/vertex'
+      responses:
+        200:
+          $ref: '#/components/responses/multipleLocation200'
+        400:
+          $ref: '#/components/responses/multipleLocation400'
+        404:
+          $ref: '#/components/responses/multipleLocation404'
+
+########
+#Floorplans
+########
+  /api/V03/floorplans:
+    get:
+      tags: [Floorplans]
+      operationId: list
+      summary: Get a list of all available floorplans
+      responses:
+        200:
+          $ref: '#/components/responses/multipleFloorplan200'
+        400: 
+          $ref: '#/components/responses/multipleFloorplan400'
+        404:
+          $ref: '#/components/responses/multipleFloorplan404'
+
+  /api/V03/floorplans/{floorplanID}/locations:
+    get:
+      tags: [Floorplans]
+      operationId: locationList
+      summary: Get a list of all locations within a floorplan
+      parameters:
+        - $ref: '#/components/parameters/pathFloorplanID'
+      responses:
+        200:
+          $ref: '#/components/responses/floorplanLocations200'
+        400: 
+          $ref: '#/components/responses/floorplanLocations400'
+        404:
+          $ref: '#/components/responses/floorplanLocations404'
+
+########
+#Assets
+########
+
+  /api/V03/assets/{assetID}:
+      get:
+        tags: [Assets]
+        operationId: get
+        summary: Returns the asset in SVG format
+        parameters:
+          - $ref: '#/components/parameters/pathAssetID'
+        responses:
+          '200':
+            description: A SVG file
+            content:
+              application/xml:
+                schema:
+                  type: string
+                  format: binary
+          '400':
+            description: Bad Request
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    data:
+                      type: object
+                    token:
+                      type: string
+                    message:
+                      type: string
+          '404':
+            description: Not Found
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    data:
+                      type: object
+                    token:
+                      type: string
+                    message:
+                      type: string
+
+########
+#User
+########
+
+  /api/V03/users/{userID}:
+      get:
+        tags: [User]
+        operationId: getDetails
+        summary: Get User Details
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+        responses:
+          200:
+            $ref: '#/components/responses/login200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+      put:
+        tags: [User]
+        operationId: updateDetails
+        summary: Update User Details
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/putUser'
+            
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+        responses:
+          200:
+            $ref: '#/components/responses/put200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+
+  /api/V03/users/{userID}/apikeys:
+      get:
+        tags: [User]
+        operationId: getAPIKeys
+        summary: Get User API Keys
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+        responses:
+          200:
+            $ref: '#/components/responses/apiKeyList200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+
+      post:
+        tags: [User]
+        operationId: addAPIKey
+        summary: Add User API Key
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/apiKeyEntry' 
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+        responses:
+          200:
+            $ref: '#/components/responses/postAPIKey200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+  
+  /api/V03/users/{userID}/apikeys/{keyID}:
+      delete:
+        tags: [User]
+        operationId: deleteAPIKey
+        summary: Delete User API Keys
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+          - $ref: '#/components/parameters/pathKeyID'
+        responses:
+          200:
+            $ref: '#/components/responses/put200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+
+########
+#Group
+########
+
+  /api/V03/groups/{userID}:
+      get:
+        tags: [Group]
+        operationId: getList
+        summary: Get User's list of groups
+        parameters:
+          - $ref: '#/components/parameters/pathUserID'
+        responses:
+          200:
+            $ref: '#/components/responses/usergroups200'
+          400:
+            description: Bad Request
+          404:
+            description: Not Found
+########
+#Authorisation
+########
+
+  /api/V03/login:
+    get:
+      tags: [Authorisation]
+      operationId: passwordLogin
+      summary: Password login
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/username'
+        - $ref: '#/components/parameters/password'
+        - $ref: '#/components/parameters/newpassword'
+      responses:
+        200:
+          $ref: '#/components/responses/login200'
+        400:
+          description: Bad Request
+        404:
+          description: Not Found
+
+  /api/V03/tokenlogin:
+    get:
+      tags: [Authorisation]
+      operationId: tokenLogin
+      summary: Token login
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/token'
+      responses:
+        200:
+          $ref: '#/components/responses/login200'
+        400:
+          $ref: '#/components/responses/login400'
+        404:
+          $ref: '#/components/responses/login404'
+
+  /api/V03/passwordreset:
+    get:
+      tags: [Authorisation]
+      security: []
+      operationId: emailPasswordReset
+      summary: Reset password via email
+      parameters:
+        - $ref: '#/components/parameters/username'
+      responses:
+        200:
+          description: Success
+
+########
+#Homepage
+########
+  /api/V03:
+    get:
+      tags: [Home]
+      summary: Home
+      responses:
+        200:
+          description: 'Hello'
+          schema:
+            type: string

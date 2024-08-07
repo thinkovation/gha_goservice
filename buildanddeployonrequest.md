@@ -22,15 +22,35 @@ The github action uses systemctl commands to start/restart the service - so you 
 ```
 [Unit]
 Description=GoService
+After=network.target
 
 [Service]
 Type=simple
-ExecStart= /bin/sh -c "/home/deploy/goservice/goservice"
+ExecStart=/home/deploy/goservice/goservice
 WorkingDirectory=/home/deploy/goservice
+Restart=on-failure
+RestartSec=5s
+User=deploy
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+This service definition file will automatically run the service after a reboot (specifically after the network is available). It will restart on failures, and it uses the deploy user (which is decent practice)
+
+Once the file is created, it should be enabled - this command creates the necessary symlinks so that the service is started automatically during the boot process. Without enabling the service, it will need to be manually started after each reboot.
+
+```
+sudo systemctl enable goservice.service
+```
+For reference, you can disable it with the following command:
+```
+sudo systemctl disable goservice.service
+```
+This wont stop it - but it will prevent it from launching at the next restart
+
+
+
 ## Creating the user
 
 In  this case I am calling the user "deploy". The user does not need a password but if you want to limit the ability of users without sudo privs to su to that user you may want to add a password.
