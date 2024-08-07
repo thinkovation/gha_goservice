@@ -6,13 +6,12 @@ import (
 	"log"
 	"os"
 
+	"goservice/db"
+	"goservice/server"
+
 	"github.com/joho/godotenv"
 )
 
-/*
-App ID = ttnreceiver_maint
-App Key = bwiawoitmisbstdwblhyh
-*/
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -20,8 +19,9 @@ func main() {
 	}
 	// Start up logging
 	logging.Logging()
+	db.Conntest()
 
-	server := NewServer(os.Getenv("HTTP_PORT"))
+	server := server.NewServer(os.Getenv("HTTP_PORT"))
 
 	fmt.Printf("Starting Server on port %v\n", server.Addr)
 	log.Printf("Starting Server on port %v\n", server.Addr)

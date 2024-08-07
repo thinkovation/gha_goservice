@@ -34,6 +34,7 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
 
         scp -o StrictHostKeyChecking=no ./$APP_NAME $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/$APP_NAME.new
+        scp -o StrictHostKeyChecking=no ./assets $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/assets
 
     - name: Restart service on remote server
       run: |

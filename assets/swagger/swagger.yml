@@ -1,0 +1,94 @@
+openapi: 3.0.0
+consumes:
+- application/json
+info:
+  title: TLA
+  description: 'TLA - Thought Leadership Assessment'
+produces:
+- application/json
+schemes:
+- http
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT # Optional, specifies the format of the bearer token (e.g., JWT)
+  schemas:
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+          example: blah
+        department:
+          type: string
+          example: blah
+    Error:
+      type: object
+      properties:
+        errorcode:
+          type: integer
+          example: 122
+        errormessage:
+          type: string
+          example: test
+  
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+  
+paths:
+
+########
+#LATEST
+########
+  /nwamdmin/V02/{uuid}:
+    get:
+      tags: [Users]
+      summary: Retrieve a user by UUID
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the user to retrieve
+      responses:
+        '200':
+          description: A user object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /nwadmin/V02/users:
+    get:
+      tags: [Users]
+      operationId: ListUsers
+      summary: List users for the current org - JSON format
+      responses:
+        '200':
+          description: An array of user objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: Users not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
